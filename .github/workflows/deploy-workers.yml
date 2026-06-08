@@ -1,0 +1,22 @@
+name: Deploy Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/contractor-v005-dev/**'
+
+jobs:
+  deploy-contractor-v005-dev:
+    runs-on: ubuntu-latest
+    name: Deploy contractor-v005-dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Deploy contractor-v005-dev
+        run: npx wrangler deploy
+        working-directory: workers/contractor-v005-dev
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
