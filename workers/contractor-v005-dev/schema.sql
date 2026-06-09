@@ -1,4 +1,4 @@
--- contractor-v004-demo D1 Schema
+-- contractor-v005-dev D1 Schema
 -- Run each statement individually (D1 does not support multi-statement batches)
 
 CREATE TABLE IF NOT EXISTS site_content (
