@@ -16,7 +16,7 @@ async function loadStatus(){
       ? "<span style='color:#4ade80'>Yes</span>"
       : "<span style='color:#f59e0b'>No — click Publish</span>";
     var items = [
-      ['Worker',    d.worker  || 'contractor-v004-demo', false],
+      ['Worker',    d.worker  || 'contractor-v005-dev', false],
       ['Version',   d.version || '0.7.0-demo',           false],
       ['D1',        d.db,       true],
       ['Vectorize', d.vectorize,true],
@@ -248,7 +248,7 @@ async function loadContentHub(){
   if (!el) return;
   el.innerHTML = '<span class="spin"></span> Loading...';
   try{
-    var r = await fetch('/api/admin/submissions?status=' + (_chFilter === 'all' ? 'all' : ''));
+    var r = await fetch('/api/admin/content-submissions?status=' + _chFilter);
     var d = await r.json();
     var filters = ['pending','approved','posted','rejected','all'];
     var filterBar = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem">';
@@ -274,13 +274,13 @@ async function loadContentHub(){
         ? '<video src="/media/serve/' + encodeURIComponent(s.r2_key) + '" style="width:100%;height:160px;object-fit:cover;display:block" muted playsinline></video>'
         : '<div style="height:100px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:2.5rem">&#128172;</div>';
       var sc   = s.status==='posted' ? '#4ade80' : s.status==='approved' ? '#60a5fa' : s.status==='rejected' ? '#f87171' : '#f59e0b';
-      var note = s.caption || s.title || s.type || '(no note)';
+      var note = s.raw_note || '(no note)';
       html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden">'
         + (s.r2_key ? '<div style="position:relative">' + thumb + '</div>' : thumb)
         + '<div style="padding:1rem">'
         + '<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">'
         + '<span style="background:' + sc + ';color:#000;font-size:.65rem;font-weight:700;padding:.15rem .5rem;border-radius:8px;text-transform:uppercase">' + s.status + '</span>'
-        + '<span style="font-size:.72rem;color:var(--muted)">' + (s.member_name||'Unknown') + '</span>'
+        + '<span style="font-size:.72rem;color:var(--muted)">' + s.submitted_by + '</span>'
         + '<span style="font-size:.7rem;color:var(--muted);margin-left:auto">' + (s.created_at||'').slice(0,10) + '</span></div>'
         + '<p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.45">' + note.slice(0,140) + (note.length>140?'...':'') + '</p>';
       if (s.status === 'pending'){
@@ -305,7 +305,7 @@ window.setChFilter = setChFilter;
 
 async function quickRejectSub(id){
   if (!confirm('Reject this submission?')) return;
-  try{ await fetch('/api/admin/submissions/' + id + '/reject', {method:'POST'}); loadContentHub(); }
+  try{ await fetch('/api/admin/content-submissions/' + id + '/reject', {method:'POST'}); loadContentHub(); }
   catch(e){ alert(e.message); }
 }
 window.quickRejectSub = quickRejectSub;
@@ -316,8 +316,8 @@ async function openChCard(id){
   var content = document.getElementById('chModalContent');
   content.innerHTML = '<div style="text-align:center;padding:2rem"><span class="spin"></span><p style="margin-top:1rem;color:var(--muted)">Generating AI captions...</p></div>';
   try{
-    await fetch('/api/admin/submissions/' + id + '/generate-captions', {method:'POST'});
-    var r = await fetch('/api/admin/submissions?status=all');
+    await fetch('/api/admin/content-submissions/' + id + '/generate-captions', {method:'POST'});
+    var r = await fetch('/api/admin/content-submissions?status=all');
     var d = await r.json();
     var s = (d.submissions||[]).find(function(x){ return x.id === id; });
     if (!s){ content.innerHTML = '<p style="color:#f87171">Submission not found</p>'; return; }
@@ -385,8 +385,8 @@ async function dispatchPost(platform){
   var res = document.getElementById('chPostResult');
   res.innerHTML = '<div style="text-align:center;padding:.75rem"><span class="spin"></span> Posting to ' + platform + '...</div>';
   try{
-    await fetch('/api/admin/submissions/' + s.id + '/approve', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caption:caption,platforms:[platform]})});
-    var r2 = await fetch('/api/admin/submissions/' + s.id + '/post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({platform:platform,caption:caption})});
+    await fetch('/api/admin/content-submissions/' + s.id + '/approve', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caption:caption,platforms:[platform]})});
+    var r2 = await fetch('/api/admin/content-submissions/' + s.id + '/post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({platform:platform,caption:caption})});
     var d  = await r2.json();
     if (d.ok){
       var plink = d.post_url ? '<br><a href="' + d.post_url + '" target="_blank" style="color:var(--a)">View Post &#8599;</a>' : '';
@@ -406,8 +406,8 @@ async function guidedPost(platform){
   var caption = document.getElementById('chCaption').value.trim();
   var res = document.getElementById('chPostResult');
   try{
-    await fetch('/api/admin/submissions/' + s.id + '/approve', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caption:caption,platforms:[platform]})});
-    await fetch('/api/admin/submissions/' + s.id + '/post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({platform:platform,caption:caption})});
+    await fetch('/api/admin/content-submissions/' + s.id + '/approve', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caption:caption,platforms:[platform]})});
+    await fetch('/api/admin/content-submissions/' + s.id + '/post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({platform:platform,caption:caption})});
   } catch(e){}
   var mediaUrl = s.r2_key ? location.origin + '/media/serve/' + encodeURIComponent(s.r2_key) : null;
   var deepLink = platform === 'instagram_guided' ? 'instagram://camera' : 'snssdk1128://';
