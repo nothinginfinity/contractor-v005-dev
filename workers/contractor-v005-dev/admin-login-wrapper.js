@@ -18,7 +18,7 @@ function json(data, status = 200) {
 async function fastStatus(env) {
   const started = Date.now();
   const out = {
-    ok: true, worker: "contractor-v005-dev", version: "0.7.0-dev",
+    ok: true, worker: "contractor-v005-dev", version: "0.7.0-demo",
     status_mode: "fast-wrapper-v2",
     db: false, r2: true, vectorize: true, ai: true,
     leads: 0, articles: 0, callbacks: 0, has_snapshot: false,
@@ -33,12 +33,15 @@ async function fastStatus(env) {
   return json(out);
 }
 
-// ── Inject admin-fix.js BEFORE the broken inline script ──────────────────────
+// ── Inject admin-fix.js BEFORE the broken inline script ───────────────────────
+// admin-fix.js is a real JS file served from /admin-fix.js — no escaping issues.
 function patchAdminHtml(html) {
   const css = `<style id="admin-bypass-css">#lock{display:none!important;}#app{display:block!important;}</style>`;
   const fixTag = `<script src="/admin-fix.js"><\/script>`;
   let out = html;
   if (out.includes("</head>")) out = out.replace("</head>", css + "</head>");
+  // Inject our script tag BEFORE the first inline <script> so our functions
+  // are defined before the (possibly broken) inline script runs
   if (out.includes("<script>")) out = out.replace("<script>", fixTag + "<script>");
   return out;
 }
@@ -56,6 +59,7 @@ export default {
       }});
     }
 
+    // Serve admin-fix.js — imported as raw text via wrangler [[rules]], no escaping
     if (path === "/admin-fix.js") {
       return new Response(ADMIN_FIX_JS, {
         headers: {
@@ -65,14 +69,17 @@ export default {
       });
     }
 
+    // Fast status
     if (request.method === "GET" && (path === "/status" || path === "/admin/status" || path === "/api/status")) {
       return fastStatus(env);
     }
 
+    // Content Hub routes
     if (path === "/crew/upload" || path.startsWith("/api/admin/content-submissions") || path.startsWith("/api/admin/social-posts")) {
       return handleContentHub(request, env);
     }
 
+    // Admin page — patch HTML to inject fix script + bypass
     if (request.method === "GET" && path === "/admin") {
       const response = await app.fetch(request, env, ctx);
       const html     = await response.text();
