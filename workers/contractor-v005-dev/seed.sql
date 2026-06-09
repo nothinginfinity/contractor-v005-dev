@@ -1,4 +1,4 @@
--- contractor-v004-demo D1 Seed
+-- contractor-v005-dev D1 Seed
 -- Minimal site_content seed — customize via /admin after deploy
 -- Run each INSERT individually
 
